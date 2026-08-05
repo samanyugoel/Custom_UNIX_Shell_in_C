@@ -4,24 +4,25 @@
 #include <unistd.h>
 #include <sys/wait.h>
 #include <errno.h>
-#include <error.h>
 #include <ctype.h>
 #include <dirent.h>
 #include <fcntl.h>
 
-#define INPUT_BUFFER 100
+#define INPUT_BUFFER 1024
 //the initial input buffer
 
 void cleanup(char *input, char **args, int count);
 char *getword(int x, char *input);     
 int pipe_function(int pipe_implement, char *input, char **args, int z);
 //z is the total number of arguments
+int run_command(char **args);
+
+
 
 int main(int argc, char *argv[])
 {
     (void)argc;
     (void)argv;
-
     while(1)    
     //infinite loop so the shell works after finishing the execution of any command 
     {
@@ -46,13 +47,17 @@ int main(int argc, char *argv[])
         if (fgets(input, INPUT_BUFFER * sizeof(char), stdin) == NULL){  
             //frees the memory if error with fetching the user input
             cleanup(input, args, z);
-            return 1;
+            return 0;
         }
         
-        while (input[x] != '\0'){
-            if (isspace((unsigned char)input[x])){
-                //skips the spaces for proper tokenization
+        while (input[x] != '\0' && input[x] != '\n'){
+           while (input[x] != '\0' && isspace((unsigned char)input[x])) {
                 x++;
+                //skips the spaces for proper tokenization
+            }
+                
+            if (input[x] == '\0' || input[x] == '\n'){ 
+                break;
             }
             else{
                 if (z >= args_buffer - 1) {
@@ -101,99 +106,66 @@ int main(int argc, char *argv[])
             if (pipe_error != 0){
                 fprintf(stderr, "Pipe failed.\n");
                 cleanup(input, args, z);
-                exit(2);
+                continue;
             }
         }
 
         else{
-            if (args[0] != NULL && 
-            strcmp(args[0], "ls") != 0 && 
-            strcmp(args[0], "cd") != 0 && 
-            strcmp(args[0], "exit") != 0)
-            {
-                int pid = fork();
-                //fork the process for running the exec() command
-
-                if (pid == -1){
+            if (args[0] != NULL){
+                if (strcmp(args[0], "exit") == 0){
+                    printf("Exit successfully initiated.\n");
                     cleanup(input, args, z);
-                    return 2;
+                    exit(0);
                 }
-
-                if (pid == 0){      
-                    //child process
-                    //gets destroyed after exec() runs without error
-                    int err = execvp(args[0], args);
-
-                    if (err == -1){
-                    //gives error if does not properly
-                        error(1, errno, "Command execution failed.\n");
-                        exit(1);
-                    }
-                }
-                else {
-                    //parent process
-                    //if parent process was destroyed instead of the child process, the shell would have destroyed itself as well, and would result in only letting one command run
-                    int statusofexec;
-                    wait(&statusofexec);
-                    if(WIFEXITED(statusofexec)){
-                        int statuscode = WEXITSTATUS(statusofexec);
-                        //gives status code depending on whether the child process exited or not
-                        if (statusofexec != 0){
-                            fprintf(stderr, "Command failed with status code %d.\n", statuscode);      
-                        }
-                    }
-                }
-            }
-
-            else if (strcmp(args[0], "ls") == 0){
-                char *targetdir = (args[1] != NULL) ? args[1] : ".";
-                    
-                DIR *dir = opendir(targetdir);
-                if (dir == NULL) {
-                    // If the directory doesn't exist or we don't have permission
-                    fprintf(stderr, "ls: Cannot open '%s': %s\n", targetdir, strerror(errno));
-                } 
-                else {
-                    struct dirent *entry;
-                    //using built-in struct for accessing the directory
-                    // Read every file entry one by one
-                    while ((entry = readdir(dir)) != NULL) {
-                        if (entry->d_name[0] == '.') {
-                            //skips the hidden files
-                            continue;
-                    }
-
-                    printf("%s  ", entry->d_name);
-
-                    }
-                    
-                    printf("\n");
-                    closedir(dir);
-                }
-            }
-
-            else if (strcmp(args[0], "cd") == 0){
+            if (strcmp(args[0], "cd") == 0) {
                 char *targetdir = args[1];
 
                 if (targetdir == NULL){
                     targetdir = getenv("HOME");
                 }
-                        
+
                 if (chdir(targetdir) != 0){
-                    fprintf(stderr, "Command execution failed.\n");
+                    perror("cd");
+                }
+                cleanup(input, args, z);
+                continue;
+            }
+
+                int pid = fork();
+            //fork the process for running the exec() command
+
+            if (pid == -1){
+                perror("fork");
+                cleanup(input, args, z);
+                continue;
+            }
+            if (pid == 0){      
+                //child process
+                //gets destroyed after exec() runs without error
+                run_command(args);
+                cleanup(input, args, z);
+                exit(0);
+                
+            }
+            
+            else {
+                //parent process
+                //if parent process was destroyed instead of the child process, the shell would have destroyed itself as well, and would result in only letting one command run
+                int statusofexec;
+                wait(&statusofexec);
+                if(WIFEXITED(statusofexec)){
+                    int statuscode = WEXITSTATUS(statusofexec);
+                    //gives status code depending on whether the child process exited or not
+                    if (statusofexec != 0){
+                        fprintf(stderr, "Command failed with status code %d.\n", statuscode);      
+                    }
                 }
             }
 
-
-            else if (strcmp(args[0], "exit") == 0){
-                printf("Exit successfully initiated.");
-                //exits succesfully and frees used memory
-                cleanup(input, args, z);
-                return 0;
-            }
         }
         cleanup(input, args, z);
         //cleans up each time the infinite loop runs
+    }
     }
     return 0;
 }
@@ -220,13 +192,14 @@ int pipe_function(int pipe_implement, char *input, char **args, int z){
     //1 -> output
 
     if (pipe(fd) == -1){
+        perror("pipe");
         return -1;
     }
 
         //first process in pipe
     pid1 = fork();
     if (pid1 == -1){
-        fprintf(stderr, "pipe() failed\n");
+        perror("fork");
         close(fd[0]);
         close(fd[1]);
         return 3;
@@ -238,73 +211,17 @@ int pipe_function(int pipe_implement, char *input, char **args, int z){
         close(fd[1]);
         close(fd[0]);
 
-            if (args[0] != NULL && 
-            strcmp(args[0], "ls") != 0 && 
-            strcmp(args[0], "cd") != 0 && 
-            strcmp(args[0], "exit") != 0)
-            {
-                int err1 = execvp(args[0], args);
-
-                if (err1 == -1){
-                    error(1, errno, "Command execution failed.\n");
-                    exit(1);
-                }
-            }
-        else if (strcmp(args[0], "ls") == 0){
-            char *targetdir = (args[1] != NULL) ? args[1] : ".";
-                    
-            DIR *dir = opendir(targetdir);
-            if (dir == NULL) {
-                // If the directory doesn't exist or we don't have permission
-                fprintf(stderr, "ls: Cannot open '%s': %s\n", targetdir, strerror(errno));
-                exit(1);
-            } 
-            else {
-                struct dirent *entry;            
-                // Read every file entry one by one
-                while ((entry = readdir(dir)) != NULL) {
-                    if (entry->d_name[0] == '.') {
-                            continue;
-                    }
-                    if (isatty(STDOUT_FILENO)) {
-                        printf("%s  ", entry->d_name);
-                    } 
-                    
-                    else{
-                        printf("%s\n", entry->d_name);
-                    }
-                }
-                printf("\n"); 
-                closedir(dir);
-                exit(0);
-            }
+        if (args[0] != NULL){
+            run_command(args);
         }
-
-        else if (strcmp(args[0], "cd") == 0){
-            char *targetdir = args[1];
-
-            if (targetdir == NULL){
-                targetdir = getenv("HOME");
-            }   
-                            
-            if (chdir(targetdir) != 0){
-                fprintf(stderr, "Command execution failed.\n");
-            }
-            exit(0);
-        }
-
-
-        else if (strcmp(args[0], "exit") == 0){
-            printf("Exit successfully initiated.");
-            cleanup(input, args, z);
-            exit(0);
-        }
+        cleanup(input, args, z);
+        exit(0);
     }
 
     //second process in pipe
     pid2 = fork();
     if (pid2 == -1){
-        fprintf(stderr, "pipe() failed\n");
+        perror("fork");
         close(fd[0]);
         close(fd[1]);
         return 3;
@@ -316,65 +233,13 @@ int pipe_function(int pipe_implement, char *input, char **args, int z){
         dup2(fd[0], STDIN_FILENO);
         close(fd[0]);
         close(fd[1]);
-        if (args[pipe_implement + 1] != NULL && 
-        strcmp(args[pipe_implement + 1], "ls") != 0 && 
-        strcmp(args[pipe_implement + 1], "cd") != 0 && 
-        strcmp(args[pipe_implement + 1], "exit") != 0){
-            int err2 = execvp(args[pipe_implement + 1], &args[pipe_implement + 1]);
-
-            if (err2 == -1){
-                error(1, errno, "Command execution failed.\n");
-                cleanup(input, args, z);
-                exit(1);
-            }
+        if (args[pipe_implement + 1] != NULL){
+            run_command(&args[pipe_implement + 1]);
         }
-        else if (strcmp(args[pipe_implement + 1], "ls") == 0){
-            char *targetdir = (args[pipe_implement + 2] != NULL) ? args[pipe_implement + 2] : ".";
-                        
-            DIR *dir = opendir(targetdir);
-            if (dir == NULL) {
-                // If the directory doesn't exist or we don't have permission
-                fprintf(stderr, "ls: Cannot open '%s': %s\n", targetdir, strerror(errno));
-                exit(1);
-            } 
-            else {
-                struct dirent *entry;
-                                    
-                // Read every file entry one by one
-                while ((entry = readdir(dir)) != NULL) {
-                    if (entry->d_name[0] == '.') {
-                        continue;
-                    }
-                    printf("%s  ", entry->d_name);
-                }
-                printf("\n"); 
-                closedir(dir);
-                exit(0);
-            }
-        }
-
-        else if (strcmp(args[pipe_implement + 1], "cd") == 0){
-            char *targetdir = args[pipe_implement + 2];
-
-            if (targetdir == NULL){
-                targetdir = getenv("HOME");
-            }
-                                    
-            if (chdir(targetdir) != 0){
-                fprintf(stderr, "Command execution failed.\n");
-            }
-            exit(0);
-        }
-
-
-        else if (strcmp(args[pipe_implement + 1], "exit") == 0){
-            //new command starts after the NULL which is at pipe_implement
-            printf("Exit successfully initiated.");
-            close(fd[0]);
-            close(fd[1]);         
-            exit(0);
-        }
+        cleanup(input, args, z);
+        exit(0);
     }
+
         
     close(fd[0]);
     close(fd[1]);
@@ -390,20 +255,76 @@ int pipe_function(int pipe_implement, char *input, char **args, int z){
         waitpid(pid2, &status2, 0);
     }
 
-    if ((WIFEXITED(status2) && WEXITSTATUS(status2)) || (WIFEXITED(status1) && WEXITSTATUS(status1)) != 0) {
+    if ((WIFEXITED(status2) && WEXITSTATUS(status2)) != 0 || (WIFEXITED(status1) && WEXITSTATUS(status1)) != 0) {
         fprintf(stderr, "Command failed.\n");
     }
     return 0;
 }
 
+
+int run_command(char **args){
+        if (strcmp(args[0], "ls") == 0){
+        char *targetdir = (args[1] != NULL) ? args[1] : ".";
+
+        DIR *dir = opendir(targetdir);
+        if (dir == NULL) {
+            //If the directory doesn't exist or we don't have permission
+            fprintf(stderr, "ls: Cannot open '%s' : %s\n", targetdir, strerror(errno));
+            return -1;
+        }
+        else {
+            struct dirent *entry;
+            //using built-in struct for accessing the directory
+            //Read every file entry one at a time
+            while ((entry = readdir(dir)) != NULL) {
+                if (entry -> d_name[0] == '.'){
+                    //skips hidden files
+                    continue;
+                }
+                printf("%s\n", entry -> d_name);
+            }
+            fflush(stdout);
+            closedir(dir);
+            return 0;
+        }
+    }
+    else if (strcmp(args[0], "pwd") == 0){
+        char cwd[1024];
+        if (getcwd (cwd, sizeof(cwd)) != NULL){
+            printf("%s\n", cwd);
+        }
+        else {
+            perror("pwd");
+        }
+        return 0;
+    }
+    else if (strcmp(args[0], "echo") == 0){
+        for (int j = 1; args[j] != NULL; j++){
+            printf("%s", args[j]);
+            if (args[j+1] != NULL){
+                printf(" ");
+            }
+        }
+        printf("\n");
+        return 0;
+    }
+    else 
+        {
+            execvp(args[0], args);
+            perror(args[0]);
+            //gives error if does not properly
+            return -1;
+        }
+}
+
+
+
 void cleanup(char *input, char **args, int count){
 if (args != NULL) {
-        
         for (int k = 0; k < count; k++) {
             //changed counter since it won't free NULL if it used instead
             free(args[k]);
             //frees each slot of the array
-
         }
         free(args);
         //frees the array as a whole in structure
@@ -413,6 +334,8 @@ if (args != NULL) {
         //frees the input used to store the arguments
     }
 }
+
+
 char *getword(int x, char *input){
     int start = x;
     int len = 0;
