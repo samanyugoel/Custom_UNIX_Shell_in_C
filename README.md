@@ -2,22 +2,24 @@
 
 ## Overview
 
-A custom-built shell created in C as a learning project which demonstrates dynamic memory allocation, memory hygiene, piping, error and signal handling, tokenization and string parsing.
+A custom-built shell created in C as a learning project which demonstrates dynamic memory allocation, memory management, piping, error and signal handling, tokenization and string parsing.
 
 ### Features
 
 * **Dynamic Memory Allocation** - Allocates memory for commands and argument lists of varying lengths using `malloc` and dynamic `realloc` arrays.
 
-* **Memory Hygiene** - Safely handles the allocated memory and freeing it wherever required using a `cleanup()` function for easy memory cleaup.
+* **Memory Management** - Safely handles the allocated memory and freeing it wherever required using a `cleanup()` function for easy memory cleaup.
  
 * **Command Execution** - Safely forks child processes and executes system executables (e.g., `ping`, `grep`, `mkdir`, etc).
 
 * **Built-in Commands** - 
   * `cd`: Changes directories natively in the parent process, falling back to the `HOME` environment variable if no path is provided.
   * `ls`: Custom directory reader that lists files cleanly and automatically filters out hidden files.
+  * `pwd`: Shows the current working directory i.e. the current location of user in the system.
+  * `echo`: Prints the text followed by this command and typed by the user.
   * `exit`: Safely frees all dynamically allocated memory before terminating.
 
-* **Error and Signal Handling** - Properly exits or gives proper signal when some errror occurs.
+* **Error Handling** - Properly exits or gives proper error message when some error occurs.
 
 * **Tokenization and String Parsing** - User arguments are tokenized parsed using `getword()` function.
 
