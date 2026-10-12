@@ -2,7 +2,7 @@
 
 ## Overview
 
-A custom-built shell created in C as a learning project which demonstrates dynamic memory allocation, memory management, piping, error and signal handling, tokenization and string parsing.
+A custom-built shell created in C as a learning project which demonstrates dynamic memory allocation, memory management, piping, error and signal handling, modular programming, tokenization and string parsing.
 
 ### Features
 
@@ -13,6 +13,8 @@ A custom-built shell created in C as a learning project which demonstrates dynam
 * **Command Execution** - Safely forks child processes and executes system executables (e.g., `ping`, `grep`, `mkdir`, etc).
 
 * **Built-in Commands** - 
+  * `pwd`: Displays the full path of the current working directory.
+  * `echo`: Prints the arguments through the terminal screen.
   * `cd`: Changes directories natively in the parent process, falling back to the `HOME` environment variable if no path is provided.
   * `ls`: Custom directory reader that lists files cleanly and automatically filters out hidden files.
   * `pwd`: Shows the current working directory i.e. the current location of user in the system.
@@ -25,9 +27,21 @@ A custom-built shell created in C as a learning project which demonstrates dynam
 
 * **Pipe (`|`)** - Connects two distinct commands using UNIX pipes. Safely reaps child processes using targeted `waitpid()` calls. 
 
+* **Use of Modules** - Functions are separated out into distinct files for their particular uses, in order to improve readability, maintainance, and structure of the code.
+
 ### The Files
 
-* `Basic_UNIX_Shell.c` - The main C file containing the source code. 
+* `main.c` - The main C file containing the source code.
+
+* `cleanup.c` - The file contains the function that is called to free the allocated memory.
+
+* `command.c` - File containing the function called when User passes arguments by typing inside the terminal.
+
+* `getword.c` - Function inside this file extracts a single word and returns the array.
+
+* `pipe.c` - This function implements the pipe functionality of the shell, allowing user to pipe two commands at a time.
+
+* `functions.h` - This header file contains the declarations of the functions used throughout the program as well as defined constant.
 
 * `Makefile` - Easy building of the code for easy compiling, cleaning and memory testing.
 
@@ -54,3 +68,8 @@ Make sure you have `gcc`, `make` and `valgrind` installed on your Linux environm
 ## Lesson Learned
 
 The developing of this shell has provided a deep insight on how the UNIX shell actually functions, majorly the functionality of `fork()`,`pipe()`, `dup2()` and `exec()` commands. This also allowed me to understand the drawbacks and advantages of dynamic memory allocation as well as securely applying it. 
+
+## References & Acknowledgments
+
+- **Linux Manual Pages**: `man 2 fork`, `man 2 execvp`, `man 2 waitpid`, `man 2 pipe`, `man 3 ctype`.
+- **General Concepts & Tutorials**: Conceptual guidance on UNIX system calls, process management, and POSIX shell mechanics from various online C programming resources and system programming tutorials.

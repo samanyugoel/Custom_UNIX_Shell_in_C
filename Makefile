@@ -2,7 +2,7 @@
 CC = gcc
 CFLAGS = -g -Wall -Wextra
 TARGET = shell
-SRC = Basic_UNIX_Shell.c
+SRC = main.c getword.c command.c cleanup.c pipe.c
 
 all: $(TARGET)
 $(TARGET): $(SRC)
