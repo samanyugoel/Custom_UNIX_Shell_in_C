@@ -12,22 +12,22 @@ A custom-built shell created in C as a learning project which demonstrates dynam
  
 * **Command Execution** - Safely forks child processes and executes system executables (e.g., `ping`, `grep`, `mkdir`, etc).
 
+* **Signal Handling** - Manages signals (like catching SIGINT for `Ctrl+C`) so that pressing it doesn't accidentally kill your main shell process while it's waiting for commands.
+
 * **Built-in Commands** - 
-  * `pwd`: Displays the full path of the current working directory.
-  * `echo`: Prints the arguments through the terminal screen.
+  * `echo`: Prints the arguments typed by the user through the terminal screen.
   * `cd`: Changes directories natively in the parent process, falling back to the `HOME` environment variable if no path is provided.
   * `ls`: Custom directory reader that lists files cleanly and automatically filters out hidden files.
-  * `pwd`: Shows the current working directory i.e. the current location of user in the system.
-  * `echo`: Prints the text followed by this command and typed by the user.
+  * `pwd`: Displays the current working directory i.e. the current location of user in the system.
   * `exit`: Safely frees all dynamically allocated memory before terminating.
 
 * **Error Handling** - Properly exits or gives proper error message when some error occurs.
 
-* **Tokenization and String Parsing** - User arguments are tokenized parsed using `getword()` function.
+* **Tokenization and String Parsing** - User arguments are tokenized and parsed using `getword()` function.
 
 * **Pipe (`|`)** - Connects two distinct commands using UNIX pipes. Safely reaps child processes using targeted `waitpid()` calls. 
 
-* **Use of Modules** - Functions are separated out into distinct files for their particular uses, in order to improve readability, maintainance, and structure of the code.
+* **Modular Architecture** - Functions are separated out into distinct files for their particular uses, in order to improve readability, maintainance, and structure of the code.
 
 ### The Files
 
@@ -39,9 +39,9 @@ A custom-built shell created in C as a learning project which demonstrates dynam
 
 * `getword.c` - Function inside this file extracts a single word and returns the array.
 
-* `pipe.c` - This function implements the pipe functionality of the shell, allowing user to pipe two commands at a time.
+* `pipe.c` - The file containing the implementation for UNIX pipes, allowing user to redirect output of one command to the input of another command.
 
-* `functions.h` - This header file contains the declarations of the functions used throughout the program as well as defined constant.
+* `functions.h` - This header file contains the declarations of the functions used throughout the program as well as defined constants.
 
 * `Makefile` - Easy building of the code for easy compiling, cleaning and memory testing.
 
@@ -67,7 +67,7 @@ Make sure you have `gcc`, `make` and `valgrind` installed on your Linux environm
 
 ## Lesson Learned
 
-The developing of this shell has provided a deep insight on how the UNIX shell actually functions, majorly the functionality of `fork()`,`pipe()`, `dup2()` and `exec()` commands. This also allowed me to understand the drawbacks and advantages of dynamic memory allocation as well as securely applying it. 
+The development of this shell has provided a deep insight on how the UNIX shell actually functions, majorly the functionality of `fork()`,`pipe()`, `dup2()` and `exec()` commands. This also allowed me to understand the drawbacks and advantages of dynamic memory allocation as well as securely applying it. 
 
 ## References & Acknowledgments
 
