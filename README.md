@@ -2,7 +2,7 @@
 
 ## Overview
 
-A custom-built shell created in C as a learning project which demonstrates dynamic memory allocation, memory management, piping, error and signal handling, modular programming, tokenization and string parsing.
+A custom-built shell created in C as a learning project which demonstrates dynamic memory allocation, memory management, piping, error handling, modular programming, tokenization and string parsing.
 
 ### Features
 
@@ -11,8 +11,6 @@ A custom-built shell created in C as a learning project which demonstrates dynam
 * **Memory Management** - Safely handles the allocated memory and freeing it wherever required using a `cleanup()` function for easy memory cleaup.
  
 * **Command Execution** - Safely forks child processes and executes system executables (e.g., `ping`, `grep`, `mkdir`, etc).
-
-* **Signal Handling** - Manages signals (like catching SIGINT for `Ctrl+C`) so that pressing it doesn't accidentally kill your main shell process while it's waiting for commands.
 
 * **Built-in Commands** - 
   * `echo`: Prints the arguments typed by the user through the terminal screen.
